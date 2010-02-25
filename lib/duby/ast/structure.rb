@@ -41,8 +41,19 @@ module Duby::AST
       klass = duby.define_class(position, name)
       klass.interfaces = [interface]
       klass.define_constructor(position)
-      find_methods(interface).each do |method|
-        klass.define_method(position, method.name, method.actual_return_type).body = body.dup
+      impl_methods = find_methods(interface)
+      # TODO: find a nice way to closure-impl multiple methods
+      # perhaps something like
+      # Collections.sort(list) do
+      #   def equals(other); self == other; end
+      #   def compareTo(x,y); Comparable(x).compareTo(y); end
+      # end
+      raise "Multiple abstract methods found; cannot use block" if impl_methods.size > 1
+      impl_methods.each do |method|
+        klass.define_method(position,
+                            method.name,
+                            method.actual_return_type,
+                            args.dup).body = body.dup
       end
       call = parent
       instance = Call.new(call, position, 'new')
@@ -75,12 +86,15 @@ module Duby::AST
   class Script < Node
     include Scope
     child :body
+    
+    attr_accessor :defining_class
 
     def initialize(parent, line_number, &block)
       super(parent, line_number, children, &block)
     end
 
     def infer(typer)
+      @defining_class ||= typer.self_type
       @inferred_type ||= typer.infer(body) || (typer.defer(self); nil)
     end
   end

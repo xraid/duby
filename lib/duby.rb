@@ -137,6 +137,8 @@ class DubyImpl
     begin
       typer.resolve(false)
     ensure
+      puts ast.inspect if @verbose
+
       failed = !typer.errors.empty?
       if failed
         puts "Inference Error:"
@@ -147,8 +149,6 @@ class DubyImpl
         exit 1
       end
     end
-
-    puts ast.inspect if @verbose
 
     compiler = @compiler_class.new(@filename)
     ast.compile(compiler, false)
